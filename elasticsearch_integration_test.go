@@ -103,11 +103,10 @@ func Test_CreateUpdateDoc(t *testing.T) {
 	setup_es_integration_tests(t)
 	clear_es_data(t, ES_TEST_INDEX)
 
-	result, err := indexer.Index(ES_TEST_INDEX, "docs", "1", true, example_doc)
+	id, err := indexer.Index(ES_TEST_INDEX, "docs", "1", true, example_doc)
 	AssertNoError(t, "error creating doc", err)
-	expectedResponse := IndexResponse{"1", ES_TEST_INDEX, "docs", true}
-	AssertEqual(t, result == expectedResponse, "incorrect response on create",
-		expectedResponse, result)
+	AssertEqual(t, id == "1", "incorrect response on create",
+		"1", id)
 
 	stored := es_get_doc(t, ES_TEST_INDEX, "docs", "1")
 	AssertEqual(t, *stored == example_doc, "indexed doc is incorrect",
@@ -120,18 +119,17 @@ func Test_CreateUpdateDoc(t *testing.T) {
 	}
 
 	// we should not be able to recreate a doc
-	result, err = indexer.Index(ES_TEST_INDEX, "docs", "1", true, example_doc)
+	id, err = indexer.Index(ES_TEST_INDEX, "docs", "1", true, example_doc)
 	AssertTrue(t, "Bad: succeeded in creating a doc twice", err != nil)
 	stored = es_get_doc(t, ES_TEST_INDEX, "docs", "1")
 	AssertEqual(t, *stored == example_doc, "failed create caused update!",
 		example_doc, *stored)
 
 	// but we should be able to update one!
-	result, err = indexer.Index(ES_TEST_INDEX, "docs", "1", false, modified_doc)
+	id, err = indexer.Index(ES_TEST_INDEX, "docs", "1", false, modified_doc)
 	AssertNoError(t, "error updating doc", err)
-	expectedResponse = IndexResponse{"1", ES_TEST_INDEX, "docs", false}
-	AssertEqual(t, result == expectedResponse, "incorrect response on update",
-		expectedResponse, result)
+	AssertEqual(t, id == "1", "incorrect response on update",
+		"1", id)
 
 	stored = es_get_doc(t, ES_TEST_INDEX, "docs", "1")
 	AssertEqual(t, *stored == modified_doc, "updated doc is incorrect",

@@ -29,10 +29,6 @@ type ElasticSearchUpdateRequest struct {
 	Doc interface{} `json:"doc"`
 }
 
-// verify that ElasticSearchIndexer implements Indexer by writing documents to
-// an Elasticsearch (http://elasticsearch.org) server.
-var _ Indexer = ElasticSearchIndexer{}
-
 const (
 	// environment variable to read for hostname
 	ES_HOSTNAME_KEY = "ES_HOSTNAME"
@@ -66,7 +62,7 @@ func MakeElasticSearchIndexerFromEnv(client HTTPPoster) *ElasticSearchIndexer {
 //
 // Similarly, if create=true and the document exists, an error will be returned,
 // and the document will not be updated.
-func (indexer ElasticSearchIndexer) Index(index string, _type string, id string, create bool, data interface{}) (response IndexResponse, err error) {
+func (indexer ElasticSearchIndexer) Index(index string, _type string, id string, create bool, data interface{}) (string, error) {
 	if create {
 		return indexer.addToIndex(index, _type, id, data)
 	}
@@ -75,23 +71,17 @@ func (indexer ElasticSearchIndexer) Index(index string, _type string, id string,
 
 // updateInIndex handles Index when create = false
 // ensures that our update request has the correct structure
-func (indexer ElasticSearchIndexer) updateInIndex(index string, _type string, id string, data interface{}) (response IndexResponse, err error) {
-	response = IndexResponse{id, index, _type, false}
-	err = nil
-
+func (indexer ElasticSearchIndexer) updateInIndex(index string, _type string, id string, data interface{}) (string, error) {
 	docURL := indexer.docURL(index, _type, id) + "/_update"
 	data = &ElasticSearchUpdateRequest{data}
-	_, err = indexer.postToURL(docURL, data)
+	_, err := indexer.postToURL(docURL, data)
 
-	return response, err
+	return id, err
 }
 
 // addToIndex handles Index when create = true
 // makes sure that we get 201 status from Elasticsearch
-func (indexer ElasticSearchIndexer) addToIndex(index string, _type string, id string, data interface{}) (response IndexResponse, err error) {
-	response = IndexResponse{id, index, _type, false}
-	err = nil
-
+func (indexer ElasticSearchIndexer) addToIndex(index string, _type string, id string, data interface{}) (string, error) {
 	docURL := indexer.docURL(index, _type, id) + "/_create"
 	httpR, err := indexer.postToURL(docURL, data)
 
@@ -99,8 +89,7 @@ func (indexer ElasticSearchIndexer) addToIndex(index string, _type string, id st
 		err = errors.New("Index() Attempted create but did not get 201 status")
 	}
 
-	response.Created = (err == nil)
-	return response, err
+	return id, err
 }
 
 // postToURL handles generic posting to Elasticsearch.

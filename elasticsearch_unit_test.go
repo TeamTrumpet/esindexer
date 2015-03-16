@@ -42,13 +42,10 @@ func setup_es_unit_test(t *testing.T) {
 func Test_ESIndexerReturnsJsonErrors(t *testing.T) {
 	setup_es_unit_test(t)
 
-	r, err := indexer.Index("testing", "impossible", "0", true, unjsonable)
+	_, err := indexer.Index("testing", "impossible", "0", true, unjsonable)
 
 	if err == nil {
 		t.Fatal("Failed to return json error")
-	}
-	if r.Created {
-		t.Fatal("Set Created to true on failure")
 	}
 }
 
@@ -73,10 +70,9 @@ func Test_ESIndexer_docURL(t *testing.T) {
 func Test_ESIndexer_create_http_errors(t *testing.T) {
 	setup_es_unit_test(t)
 	httpMock.Err = errors.New("test error")
-	response, err := indexer.Index("trumpet", "doc", "first", true, example_doc)
+	_, err := indexer.Index("trumpet", "doc", "first", true, example_doc)
 
 	AssertEqual(t, err == httpMock.Err, "ElasticSearchIndexer did not propagate error correctly", err, httpMock.Err)
-	AssertFalse(t, "indexer reports create on error?", response.Created)
 }
 
 // Test_ESIndexer_create runs a few basic tests with a mock http poster
@@ -84,14 +80,13 @@ func Test_ESIndexer_create_http_errors(t *testing.T) {
 func Test_ESIndexer_create(t *testing.T) {
 	setup_es_unit_test(t)
 	httpMock.Result.StatusCode = 201
-	response, err := indexer.Index("trumpet", "doc", "first", true, example_doc)
+	id, err := indexer.Index("trumpet", "doc", "first", true, example_doc)
 
 	// check for errors
 	AssertNoError(t, "Failed to create doc", err)
 
 	// was the response correct?
-	expectedResponse := IndexResponse{"first", "trumpet", "doc", true}
-	AssertEqual(t, expectedResponse == response, "Index response after create is incorrect", expectedResponse, response)
+	AssertEqual(t, "first" == id, "Index response after create is incorrect", "first", id)
 
 	// is the url valid?
 	_, err = url.ParseRequestURI(httpMock.RequestURL)
