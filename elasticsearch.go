@@ -29,6 +29,13 @@ type ElasticSearchUpdateRequest struct {
 	Doc interface{} `json:"doc"`
 }
 
+// ElasticSearchPartialUpdateRequest represents the json-formatted request that
+// Elasticsearch requires for document updates
+type ElasticSearchPartialUpdateRequest struct {
+	Script string                 `json:"script"`
+	Params map[string]interface{} `json:"params"`
+}
+
 const (
 	// environment variable to read for hostname
 	ES_HOSTNAME_KEY = "ES_HOSTNAME"
@@ -62,11 +69,25 @@ func MakeElasticSearchIndexerFromEnv(client HTTPPoster) *ElasticSearchIndexer {
 //
 // Similarly, if create=true and the document exists, an error will be returned,
 // and the document will not be updated.
-func (indexer ElasticSearchIndexer) Index(index string, _type string, id string, create bool, data interface{}) (string, error) {
+func (indexer ElasticSearchIndexer) Index(index, _type, id string, create bool, data interface{}) (string, error) {
 	if create {
 		return indexer.addToIndex(index, _type, id, data)
 	}
 	return indexer.updateInIndex(index, _type, id, data)
+}
+
+func (indexer ElasticSearchIndexer) PartialUpdate(index, _type, id, field string, data interface{}) (string, error) {
+	updateCommand := ElasticSearchPartialUpdateRequest{
+		Script: fmt.Sprintf("ctx._source.%s = pudate", field),
+		Params: map[string]interface{}{
+			"pudate": data,
+		},
+	}
+
+	docURL := indexer.docURL(index, _type, id) + "/_update"
+	_, err := indexer.postToURL(docURL, updateCommand)
+
+	return id, err
 }
 
 // updateInIndex handles Index when create = false

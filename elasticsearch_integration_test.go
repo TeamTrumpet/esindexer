@@ -8,6 +8,7 @@ import (
 	"os"
 	"strings"
 	"testing"
+	"time"
 )
 
 // uses the following vars from other tests
@@ -145,4 +146,26 @@ func Test_UpdateNewDoc(t *testing.T) {
 
 	_, err := indexer.Index(ES_TEST_INDEX, "docs", "1", false, example_doc)
 	AssertTrue(t, "Bad: succeeded in updating an unindexed doc", err != nil)
+}
+
+func Test_PartialUpdateDoc(t *testing.T) {
+	setup_es_integration_tests(t)
+	clear_es_data(t, ES_TEST_INDEX)
+
+	partial_doc := Document{
+		Title: "Trumpet.ca Programming Problem",
+		Body:  "You’ll implement the code for a search indexing system for models such as this...",
+		Timestamp: Timestamp{
+			CreatedAt:  time.Now(),
+			ModifiedAt: time.Now(),
+		},
+	}
+
+	_, err := indexer.Index(ES_TEST_INDEX, "docs", "2", true, partial_doc)
+	AssertNoError(t, "error creating doc", err)
+
+	partial_doc.Title = "hello world!"
+
+	_, err = indexer.PartialUpdate(ES_TEST_INDEX, "docs", "2", "title", partial_doc.Title)
+	AssertNoError(t, "error updating doc", err)
 }
